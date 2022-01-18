@@ -63,6 +63,40 @@ func (uc UserController) GetUser(w http.ResponseWriter, r *http.Request, p httpr
 	fmt.Fprintf(w, "%s\n", uj)
 }
 
+func (uc UserController) UpdateUser(w http.ResponseWriter, r *http.Request, p httprouter.Params) {
+	u := models.User{}
+	id := p.ByName("id")
+	if !bson.IsObjectIdHex(id) {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+	oid := bson.ObjectIdHex(id)
+
+	json.NewDecoder(r.Body).Decode(&u)
+
+	update := bson.M{
+		"$set": bson.M{
+			"name":   u.Name,
+			"age":    u.Age,
+			"gender": u.Gender,
+		},
+	}
+
+	uj, err := json.Marshal(u)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	if err := uc.Session.DB("mongo-golang").C("users").Update(bson.M{"_id": oid}, update); err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	fmt.Fprintf(w, "%s\n", uj)
+}
+
 func (uc UserController) GetAllUsers(w http.ResponseWriter, r *http.Request, _ httprouter.Params) {
 	u := []models.User{}
 
